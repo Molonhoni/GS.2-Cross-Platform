@@ -8,9 +8,20 @@ import 'package:http/testing.dart';
 
 import 'package:territorio_vivo/controllers/weather_controller.dart';
 import 'package:territorio_vivo/main.dart';
+import 'package:territorio_vivo/screens/home_screen.dart';
+import 'package:territorio_vivo/screens/trends_screen.dart';
 import 'package:territorio_vivo/services/weather_service.dart';
 
 void main() {
+  // Dados simulados para os testes automatizados.
+  final hourlyTimes = List.generate(
+    72,
+    (index) => DateTime(2026, 11, 9)
+        .add(Duration(hours: index))
+        .toIso8601String()
+        .substring(0, 16),
+  );
+
   final mockResponse = {
     'current': {
       'time': '2026-11-09T15:15',
@@ -21,79 +32,135 @@ void main() {
     'daily': {
       'precipitation_probability_max': [75, 45, 30],
     },
+    'hourly': {
+      'time': hourlyTimes,
+      'temperature_2m': List.generate(
+        72,
+        (index) => 20.0 + (index % 12) * 0.5,
+      ),
+      'precipitation': List.generate(
+        72,
+        (index) => index % 7 == 0 ? 1.2 : 0.0,
+      ),
+    },
   };
 
-  test(
-    'WeatherController carrega e disponibiliza os dados',
-    () async {
-      final client = MockClient((request) async {
+  // Auxiliar para localizar componentes em listas roláveis.
+  Future<void> scrollToText(
+    WidgetTester tester,
+    Finder screen,
+    String text, {
+    double scrollDelta = 300,
+  }) async {
+    final scrollable = find.descendant(
+      of: screen,
+      matching: find.byType(Scrollable),
+    ).first;
+
+    await tester.scrollUntilVisible(
+      find.text(text),
+      scrollDelta,
+      scrollable: scrollable,
+      maxScrolls: 20,
+    );
+
+    await tester.pumpAndSettle();
+  }
+
+  // TESTE 01 - Conversão dos dados da API.
+  test('Converte os dados e as previsoes horarias', () async {
+    final client = MockClient((request) async {
+      return http.Response(
+        jsonEncode(mockResponse),
+        200,
+      );
+    });
+
+    final service = WeatherService(client: client);
+    final data = await service.fetchWeather();
+
+    expect(data.temperature, 26.4);
+    expect(data.humidity, 70);
+    expect(data.maxRainProbabilityToday, 75);
+    expect(data.hourlyForecast.length, 24);
+    expect(data.hourlyForecast.first.time.hour, 16);
+
+    client.close();
+  });
+
+  // TESTE 02 - Gerenciamento de estado.
+  test('Controller carrega dados e previsoes', () async {
+    final client = MockClient((request) async {
+      return http.Response(
+        jsonEncode(mockResponse),
+        200,
+      );
+    });
+
+    final controller = WeatherController(
+      WeatherService(client: client),
+    );
+
+    await controller.loadWeather();
+
+    expect(controller.isLoading, false);
+    expect(controller.hasData, true);
+    expect(controller.error, isNull);
+    expect(controller.weather?.temperature, 26.4);
+
+    expect(
+      controller.weather?.hourlyForecast.length,
+      24,
+    );
+
+    controller.dispose();
+    client.close();
+  });
+
+  // TESTE 03 - Tratamento de falhas na API.
+  test('Mantem os dados quando a atualizacao falha', () async {
+    var requestCount = 0;
+
+    final client = MockClient((request) async {
+      requestCount++;
+
+      if (requestCount == 1) {
         return http.Response(
           jsonEncode(mockResponse),
           200,
         );
-      });
+      }
 
-      final controller = WeatherController(
-        WeatherService(client: client),
+      return http.Response(
+        '{"error": "indisponivel"}',
+        503,
       );
+    });
 
-      await controller.loadWeather();
+    final controller = WeatherController(
+      WeatherService(client: client),
+    );
 
-      expect(controller.isLoading, false);
-      expect(controller.hasData, true);
-      expect(controller.error, isNull);
-      expect(controller.weather?.temperature, 26.4);
-      expect(controller.weather?.humidity, 70);
+    await controller.loadWeather();
 
-      controller.dispose();
-      client.close();
-    },
-  );
+    expect(controller.hasData, true);
+    expect(controller.weather?.temperature, 26.4);
 
-  test(
-    'Mantem dados anteriores quando a atualizacao falha',
-    () async {
-      var requestCount = 0;
+    await controller.loadWeather();
 
-      final client = MockClient((request) async {
-        requestCount++;
+    expect(controller.hasData, true);
+    expect(controller.weather?.temperature, 26.4);
+    expect(controller.error, isNotNull);
+    expect(controller.isLoading, false);
+    expect(requestCount, 2);
 
-        if (requestCount == 1) {
-          return http.Response(
-            jsonEncode(mockResponse),
-            200,
-          );
-        }
+    controller.dispose();
+    client.close();
+  });
 
-        return http.Response(
-          '{"error": "indisponivel"}',
-          503,
-        );
-      });
-
-      final controller = WeatherController(
-        WeatherService(client: client),
-      );
-
-      await controller.loadWeather();
-
-      expect(controller.weather?.temperature, 26.4);
-
-      await controller.loadWeather();
-
-      expect(controller.hasData, true);
-      expect(controller.weather?.temperature, 26.4);
-      expect(controller.error, isNotNull);
-      expect(controller.isLoading, false);
-      expect(requestCount, 2);
-
-      controller.dispose();
-      client.close();
-    },
-  );
-
+  // TESTE 04 - Interface, gráficos e navegação.
   testWidgets(
-    'Navegacao preserva os dados e evita novas consultas',
+    'Exibe graficos e navega entre os modulos',
     (WidgetTester tester) async {
       var requestCount = 0;
 
@@ -114,6 +181,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Verifica os indicadores da tela inicial.
       expect(
         find.text('Condições climáticas'),
         findsOneWidget,
@@ -126,6 +194,19 @@ void main() {
 
       expect(requestCount, 1);
 
+      // Rola até o gráfico no Dashboard.
+      await scrollToText(
+        tester,
+        find.byType(HomeScreen),
+        'Previsão de temperatura',
+      );
+
+      expect(
+        find.text('Previsão de temperatura'),
+        findsOneWidget,
+      );
+
+      // Navega para Tendências.
       await tester.tap(
         find.byIcon(Icons.show_chart_outlined),
       );
@@ -133,12 +214,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Evolução dos indicadores'),
+        find.text('Análise de tendências'),
         findsOneWidget,
       );
 
+      // Localiza o gráfico de precipitação.
+      await scrollToText(
+        tester,
+        find.byType(TrendsScreen),
+        'Previsão de precipitação',
+      );
+
+      expect(
+        find.text('Previsão de precipitação'),
+        findsOneWidget,
+      );
+
+      // Confirma que a navegação não gerou
+      // novas requisições à API.
       expect(requestCount, 1);
 
+      // Navega para Alertas.
       await tester.tap(
         find.byIcon(Icons.warning_amber_outlined),
       );
@@ -150,27 +246,48 @@ void main() {
         findsOneWidget,
       );
 
-      expect(requestCount, 1);
+      // Navega para Registros.
+      await tester.tap(
+        find.byIcon(Icons.assignment_outlined),
+      );
 
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Registros em preparação'),
+        findsOneWidget,
+      );
+
+      // Retorna ao Dashboard.
       await tester.tap(
         find.byIcon(Icons.dashboard_outlined),
       );
 
       await tester.pumpAndSettle();
 
+      // Volta ao início da lista para conferir
+      // que os indicadores foram preservados.
+      await scrollToText(
+        tester,
+        find.byType(HomeScreen),
+        'Condições climáticas',
+        scrollDelta: -300,
+      );
+
+      expect(
+        find.text('Condições climáticas'),
+        findsOneWidget,
+      );
+
       expect(
         find.text('26.4 °C'),
         findsOneWidget,
       );
 
-      await tester.tap(
-        find.byTooltip('Atualizar informações'),
-      );
+      // Nenhuma consulta adicional deve ocorrer.
+      expect(requestCount, 1);
 
-      await tester.pumpAndSettle();
-
-      expect(requestCount, 2);
-
+      // Finaliza a árvore de widgets.
       await tester.pumpWidget(
         const SizedBox.shrink(),
       );

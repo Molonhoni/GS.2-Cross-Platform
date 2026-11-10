@@ -6,6 +6,7 @@ import '../core/theme/app_theme.dart';
 import '../services/weather_service.dart';
 import 'home_screen.dart';
 import 'module_placeholder_screen.dart';
+import 'trends_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final WeatherService? weatherService;
@@ -40,18 +41,8 @@ class _MainNavigationScreenState
         weatherController: _weatherController,
       ),
 
-      const ModulePlaceholderScreen(
-        title: 'Tendências',
-        headline: 'Evolução dos indicadores',
-        description:
-            'Acompanhe tendências climáticas e '
-            'informações relevantes para o território.',
-        icon: Icons.show_chart_rounded,
-        plannedFeatures: [
-          'Gráficos de temperatura',
-          'Previsão de precipitação',
-          'Análise de tendências climáticas',
-        ],
+      TrendsScreen(
+        controller: _weatherController,
       ),
 
       const ModulePlaceholderScreen(
@@ -111,14 +102,12 @@ class _MainNavigationScreenState
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon:
-                Icon(Icons.dashboard_rounded),
+            selectedIcon: Icon(Icons.dashboard_rounded),
             label: 'Painel',
           ),
           NavigationDestination(
             icon: Icon(Icons.show_chart_outlined),
-            selectedIcon:
-                Icon(Icons.show_chart_rounded),
+            selectedIcon: Icon(Icons.show_chart_rounded),
             label: 'Tendências',
           ),
           NavigationDestination(
@@ -129,8 +118,7 @@ class _MainNavigationScreenState
           ),
           NavigationDestination(
             icon: Icon(Icons.assignment_outlined),
-            selectedIcon:
-                Icon(Icons.assignment_rounded),
+            selectedIcon: Icon(Icons.assignment_rounded),
             label: 'Registros',
           ),
         ],

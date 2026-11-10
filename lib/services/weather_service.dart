@@ -28,6 +28,7 @@ class WeatherService {
       'longitude': '-46.6333',
       'current':
           'temperature_2m,relative_humidity_2m,precipitation',
+      'hourly': 'temperature_2m,precipitation',
       'daily': 'precipitation_probability_max',
       'forecast_days': '3',
       'timezone': 'America/Sao_Paulo',

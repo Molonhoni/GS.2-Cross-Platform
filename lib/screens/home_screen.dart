@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
+import '../widgets/forecast_charts.dart';
 import '../widgets/module_card.dart';
 import '../widgets/weather_overview_card.dart';
 
@@ -78,6 +79,22 @@ class HomeScreen extends StatelessWidget {
               controller: weatherController,
             ),
 
+            const SizedBox(height: 24),
+
+            ListenableBuilder(
+              listenable: weatherController,
+              builder: (context, child) {
+                if (!weatherController.hasData) {
+                  return const SizedBox.shrink();
+                }
+
+                return TemperatureForecastCard(
+                  forecast: weatherController
+                      .weather!.hourlyForecast,
+                );
+              },
+            ),
+
             const SizedBox(height: 30),
 
             const Text(
@@ -111,7 +128,7 @@ class HomeScreen extends StatelessWidget {
               icon: Icons.show_chart_rounded,
               title: 'Tendências',
               description:
-                  'Análise da evolução dos indicadores.',
+                  'Previsões de temperatura e precipitação.',
             ),
 
             const ModuleCard(
@@ -131,8 +148,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             const Text(
-              'Os módulos estão em preparação. '
-              'Novas funcionalidades serão integradas '
+              'Alertas e registros serão integrados '
               'nas próximas versões.',
               textAlign: TextAlign.center,
               style: TextStyle(

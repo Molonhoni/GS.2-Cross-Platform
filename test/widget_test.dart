@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:territorio_vivo/controllers/weather_controller.dart';
 import 'package:territorio_vivo/main.dart';
 import 'package:territorio_vivo/services/weather_service.dart';
 
@@ -22,73 +23,159 @@ void main() {
     },
   };
 
-  WeatherService createMockService() {
-    return WeatherService(
-      client: MockClient((request) async {
+  test(
+    'WeatherController carrega e disponibiliza os dados',
+    () async {
+      final client = MockClient((request) async {
         return http.Response(
           jsonEncode(mockResponse),
           200,
-          headers: {
-            'content-type': 'application/json',
-          },
         );
-      }),
-    );
-  }
+      });
 
-  test('Converte os dados meteorológicos da API', () async {
-    final service = createMockService();
-    final data = await service.fetchWeather();
+      final controller = WeatherController(
+        WeatherService(client: client),
+      );
 
-    expect(data.temperature, 26.4);
-    expect(data.humidity, 70);
-    expect(data.precipitation, 0.0);
-    expect(data.maxRainProbabilityToday, 75);
-  });
+      await controller.loadWeather();
 
-  testWidgets('Exibe clima e navega entre os modulos', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      TerritorioVivoApp(
-        weatherService: createMockService(),
-      ),
-    );
+      expect(controller.isLoading, false);
+      expect(controller.hasData, true);
+      expect(controller.error, isNull);
+      expect(controller.weather?.temperature, 26.4);
+      expect(controller.weather?.humidity, 70);
 
-    await tester.pumpAndSettle();
+      controller.dispose();
+      client.close();
+    },
+  );
 
-    expect(find.text('Território Vivo'), findsOneWidget);
-    expect(find.text('Condições climáticas'), findsOneWidget);
-    expect(find.text('26.4 °C'), findsOneWidget);
+  test(
+    'Mantem dados anteriores quando a atualizacao falha',
+    () async {
+      var requestCount = 0;
 
-    await tester.tap(
-      find.byIcon(Icons.show_chart_outlined),
-    );
-    await tester.pumpAndSettle();
+      final client = MockClient((request) async {
+        requestCount++;
 
-    expect(
-      find.text('Evolução dos indicadores'),
-      findsOneWidget,
-    );
+        if (requestCount == 1) {
+          return http.Response(
+            jsonEncode(mockResponse),
+            200,
+          );
+        }
 
-    await tester.tap(
-      find.byIcon(Icons.warning_amber_outlined),
-    );
-    await tester.pumpAndSettle();
+        return http.Response(
+          '{"error": "indisponivel"}',
+          503,
+        );
+      });
 
-    expect(
-      find.text('Alertas em preparação'),
-      findsOneWidget,
-    );
+      final controller = WeatherController(
+        WeatherService(client: client),
+      );
 
-    await tester.tap(
-      find.byIcon(Icons.assignment_outlined),
-    );
-    await tester.pumpAndSettle();
+      await controller.loadWeather();
 
-    expect(
-      find.text('Registros em preparação'),
-      findsOneWidget,
-    );
-  });
+      expect(controller.weather?.temperature, 26.4);
+
+      await controller.loadWeather();
+
+      expect(controller.hasData, true);
+      expect(controller.weather?.temperature, 26.4);
+      expect(controller.error, isNotNull);
+      expect(controller.isLoading, false);
+      expect(requestCount, 2);
+
+      controller.dispose();
+      client.close();
+    },
+  );
+
+  testWidgets(
+    'Navegacao preserva os dados e evita novas consultas',
+    (WidgetTester tester) async {
+      var requestCount = 0;
+
+      final client = MockClient((request) async {
+        requestCount++;
+
+        return http.Response(
+          jsonEncode(mockResponse),
+          200,
+        );
+      });
+
+      await tester.pumpWidget(
+        TerritorioVivoApp(
+          weatherService: WeatherService(client: client),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Condições climáticas'),
+        findsOneWidget,
+      );
+
+      expect(
+        find.text('26.4 °C'),
+        findsOneWidget,
+      );
+
+      expect(requestCount, 1);
+
+      await tester.tap(
+        find.byIcon(Icons.show_chart_outlined),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Evolução dos indicadores'),
+        findsOneWidget,
+      );
+
+      expect(requestCount, 1);
+
+      await tester.tap(
+        find.byIcon(Icons.warning_amber_outlined),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Alertas em preparação'),
+        findsOneWidget,
+      );
+
+      expect(requestCount, 1);
+
+      await tester.tap(
+        find.byIcon(Icons.dashboard_outlined),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('26.4 °C'),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byTooltip('Atualizar informações'),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(requestCount, 2);
+
+      await tester.pumpWidget(
+        const SizedBox.shrink(),
+      );
+
+      client.close();
+    },
+  );
 }

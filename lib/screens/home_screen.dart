@@ -1,14 +1,18 @@
 
 import 'package:flutter/material.dart';
+
+import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/module_card.dart';
-import '../services/weather_service.dart';
 import '../widgets/weather_overview_card.dart';
 
 class HomeScreen extends StatelessWidget {
-  final WeatherService? weatherService;
+  final WeatherController weatherController;
 
-  const HomeScreen({super.key, this.weatherService});
+  const HomeScreen({
+    super.key,
+    required this.weatherController,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +41,8 @@ class HomeScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(22),
               ),
               child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.location_city_rounded,
@@ -69,7 +74,9 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            WeatherOverviewCard(service: weatherService),
+            WeatherOverviewCard(
+              controller: weatherController,
+            ),
 
             const SizedBox(height: 30),
 
@@ -125,7 +132,8 @@ class HomeScreen extends StatelessWidget {
 
             const Text(
               'Os módulos estão em preparação. '
-              'Os dados serão integrados nas próximas versões.',
+              'Novas funcionalidades serão integradas '
+              'nas próximas versões.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.black54,

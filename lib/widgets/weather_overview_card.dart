@@ -1,195 +1,284 @@
 
 import 'package:flutter/material.dart';
 
+import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
 import '../models/weather_data.dart';
-import '../services/weather_service.dart';
 
-class WeatherOverviewCard extends StatefulWidget {
-  final WeatherService? service;
+class WeatherOverviewCard extends StatelessWidget {
+  final WeatherController controller;
 
-  const WeatherOverviewCard({super.key, this.service});
-
-  @override
-  State<WeatherOverviewCard> createState() =>
-      _WeatherOverviewCardState();
-}
-
-class _WeatherOverviewCardState
-    extends State<WeatherOverviewCard> {
-  late final WeatherService _service;
-  late Future<WeatherData> _weatherFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _service = widget.service ?? WeatherService();
-    _weatherFuture = _service.fetchWeather();
-  }
-
-  void _refresh() {
-    setState(() {
-      _weatherFuture = _service.fetchWeather();
-    });
-  }
+  const WeatherOverviewCard({
+    super.key,
+    required this.controller,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.support),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, child) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppColors.support,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.cloud_outlined,
-                color: AppColors.accent,
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Condições climáticas',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: AppColors.primary,
+              Row(
+                children: [
+                  const Icon(
+                    Icons.cloud_outlined,
+                    color: AppColors.accent,
                   ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Condições climáticas',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Atualizar informações',
+                    onPressed: controller.isLoading
+                        ? null
+                        : () {
+                            controller.loadWeather();
+                          },
+                    icon: const Icon(Icons.refresh),
+                  ),
+                ],
+              ),
+
+              const Text(
+                'São Paulo, SP',
+                style: TextStyle(
+                  color: Colors.black54,
                 ),
               ),
-              IconButton(
-                tooltip: 'Atualizar informações',
-                onPressed: _refresh,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
-          ),
-          const Text(
-            'São Paulo, SP',
-            style: TextStyle(color: Colors.black54),
-          ),
-          const SizedBox(height: 18),
-          FutureBuilder<WeatherData>(
-            future: _weatherFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState !=
-                  ConnectionState.done) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(
+
+              const SizedBox(height: 18),
+
+              if (controller.isLoading &&
+                  !controller.hasData)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
                     child: Column(
                       children: [
                         CircularProgressIndicator(),
                         SizedBox(height: 12),
-                        Text('Consultando dados climáticos...'),
+                        Text(
+                          'Consultando dados climáticos...',
+                        ),
                       ],
                     ),
                   ),
-                );
-              }
+                )
+              else if (!controller.hasData)
+                _ErrorContent(
+                  message: controller.error ??
+                      'Dados meteorológicos indisponíveis.',
+                  onRetry: () {
+                    controller.loadWeather();
+                  },
+                )
+              else
+                _WeatherContent(
+                  data: controller.weather!,
+                  isLoading: controller.isLoading,
+                  error: controller.error,
+                ),
 
-              if (snapshot.hasError || !snapshot.hasData) {
-                return Column(
-                  children: [
-                    const Icon(
-                      Icons.wifi_off,
-                      color: Colors.orange,
-                      size: 32,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      snapshot.error?.toString() ??
-                          'Dados indisponíveis.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _refresh,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Tentar novamente'),
-                    ),
-                  ],
-                );
-              }
+              const SizedBox(height: 14),
 
-              final data = snapshot.data!;
-
-              final hour = data.referenceTime.hour
-                  .toString()
-                  .padLeft(2, '0');
-              final minute = data.referenceTime.minute
-                  .toString()
-                  .padLeft(2, '0');
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      return GridView.count(
-                        shrinkWrap: true,
-                        physics:
-                            const NeverScrollableScrollPhysics(),
-                        crossAxisCount:
-                            constraints.maxWidth >= 700 ? 4 : 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1.4,
-                        children: [
-                          _MetricTile(
-                            icon: Icons.thermostat_outlined,
-                            label: 'Temperatura',
-                            value:
-                                '${data.temperature.toStringAsFixed(1)} °C',
-                          ),
-                          _MetricTile(
-                            icon: Icons.water_drop_outlined,
-                            label: 'Umidade',
-                            value: '${data.humidity}%',
-                          ),
-                          _MetricTile(
-                            icon: Icons.grain_outlined,
-                            label: 'Precipitação',
-                            value:
-                                '${data.precipitation.toStringAsFixed(1)} mm',
-                          ),
-                          _MetricTile(
-                            icon: Icons.umbrella_outlined,
-                            label: 'Máx. prob. chuva hoje',
-                            value:
-                                '${data.maxRainProbabilityToday}%',
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'Horário de referência: $hour:$minute',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
-              );
-            },
+              const Text(
+                'Fonte: Open-Meteo. Dados meteorológicos '
+                'modelados e sujeitos a incertezas. '
+                'A probabilidade exibida é o máximo '
+                'previsto para hoje, não um alerta oficial.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
+        );
+      },
+    );
+  }
+}
+
+class _WeatherContent extends StatelessWidget {
+  final WeatherData data;
+  final bool isLoading;
+  final String? error;
+
+  const _WeatherContent({
+    required this.data,
+    required this.isLoading,
+    required this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hour = data.referenceTime.hour
+        .toString()
+        .padLeft(2, '0');
+
+    final minute = data.referenceTime.minute
+        .toString()
+        .padLeft(2, '0');
+
+    final day = data.referenceTime.day
+        .toString()
+        .padLeft(2, '0');
+
+    final month = data.referenceTime.month
+        .toString()
+        .padLeft(2, '0');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isLoading) ...[
+          const LinearProgressIndicator(),
+          const SizedBox(height: 16),
           const Text(
-            'Fonte: Open-Meteo. Dados meteorológicos '
-            'modelados, sujeitos a incertezas. '
-            'A probabilidade exibida é o máximo '
-            'previsto para hoje, não um alerta oficial.',
+            'Atualizando informações...',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               color: Colors.black54,
             ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        if (error != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline,
+                  color: Color(0xFF995B00),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '$error '
+                    'Exibindo os últimos dados disponíveis.',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF713F00),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GridView.count(
+              shrinkWrap: true,
+              physics:
+                  const NeverScrollableScrollPhysics(),
+              crossAxisCount:
+                  constraints.maxWidth >= 700 ? 4 : 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.4,
+              children: [
+                _MetricTile(
+                  icon: Icons.thermostat_outlined,
+                  label: 'Temperatura',
+                  value:
+                      '${data.temperature.toStringAsFixed(1)} °C',
+                ),
+                _MetricTile(
+                  icon: Icons.water_drop_outlined,
+                  label: 'Umidade',
+                  value: '${data.humidity}%',
+                ),
+                _MetricTile(
+                  icon: Icons.grain_outlined,
+                  label: 'Precipitação',
+                  value:
+                      '${data.precipitation.toStringAsFixed(1)} mm',
+                ),
+                _MetricTile(
+                  icon: Icons.umbrella_outlined,
+                  label: 'Máx. prob. chuva hoje',
+                  value:
+                      '${data.maxRainProbabilityToday}%',
+                ),
+              ],
+            );
+          },
+        ),
+
+        const SizedBox(height: 14),
+
+        Text(
+          'Referência meteorológica: '
+          '$day/$month às $hour:$minute',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.black54,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ErrorContent extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorContent({
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        children: [
+          const Icon(
+            Icons.wifi_off,
+            size: 34,
+            color: Colors.orange,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Tentar novamente'),
           ),
         ],
       ),
@@ -219,7 +308,10 @@ class _MetricTile extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: AppColors.accent),
+          Icon(
+            icon,
+            color: AppColors.accent,
+          ),
           const SizedBox(height: 7),
           Text(
             value,

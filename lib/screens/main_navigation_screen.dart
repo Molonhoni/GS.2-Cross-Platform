@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
 import '../services/weather_service.dart';
 import 'home_screen.dart';
@@ -23,15 +24,20 @@ class _MainNavigationScreenState
     extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
+  late final WeatherController _weatherController;
   late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
 
+    _weatherController = WeatherController(
+      widget.weatherService ?? WeatherService(),
+    );
+
     _screens = [
       HomeScreen(
-        weatherService: widget.weatherService,
+        weatherController: _weatherController,
       ),
 
       const ModulePlaceholderScreen(
@@ -76,6 +82,14 @@ class _MainNavigationScreenState
         ],
       ),
     ];
+
+    _weatherController.loadWeather();
+  }
+
+  @override
+  void dispose() {
+    _weatherController.dispose();
+    super.dispose();
   }
 
   @override
@@ -97,22 +111,26 @@ class _MainNavigationScreenState
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
+            selectedIcon:
+                Icon(Icons.dashboard_rounded),
             label: 'Painel',
           ),
           NavigationDestination(
             icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart_rounded),
+            selectedIcon:
+                Icon(Icons.show_chart_rounded),
             label: 'Tendências',
           ),
           NavigationDestination(
             icon: Icon(Icons.warning_amber_outlined),
-            selectedIcon: Icon(Icons.warning_amber_rounded),
+            selectedIcon:
+                Icon(Icons.warning_amber_rounded),
             label: 'Alertas',
           ),
           NavigationDestination(
             icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment_rounded),
+            selectedIcon:
+                Icon(Icons.assignment_rounded),
             label: 'Registros',
           ),
         ],

@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 void main() {
   runApp(const TerritorioVivoApp());
@@ -16,7 +16,7 @@ class TerritorioVivoApp extends StatelessWidget {
       title: 'Território Vivo',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const HomeScreen(),
+      home: const MainNavigationScreen(),
     );
   }
 }

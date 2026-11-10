@@ -1,11 +1,18 @@
 
 import 'package:flutter/material.dart';
+
 import '../core/theme/app_theme.dart';
+import '../services/weather_service.dart';
 import 'home_screen.dart';
 import 'module_placeholder_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  final WeatherService? weatherService;
+
+  const MainNavigationScreen({
+    super.key,
+    this.weatherService,
+  });
 
   @override
   State<MainNavigationScreen> createState() =>
@@ -16,51 +23,60 @@ class _MainNavigationScreenState
     extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _screens = [
-    HomeScreen(),
+  late final List<Widget> _screens;
 
-    ModulePlaceholderScreen(
-      title: 'Tendências',
-      headline: 'Evolução dos indicadores',
-      description:
-          'Acompanhe tendências climáticas e '
-          'informações relevantes para o território.',
-      icon: Icons.show_chart_rounded,
-      plannedFeatures: [
-        'Gráficos de temperatura',
-        'Previsão de precipitação',
-        'Análise de tendências climáticas',
-      ],
-    ),
+  @override
+  void initState() {
+    super.initState();
 
-    ModulePlaceholderScreen(
-      title: 'Alertas',
-      headline: 'Alertas em preparação',
-      description:
-          'Identificação preventiva de situações '
-          'que podem exigir atenção dos gestores.',
-      icon: Icons.warning_amber_rounded,
-      plannedFeatures: [
-        'Identificação de riscos potenciais',
-        'Justificativa e nível de confiança',
-        'Limitações e recomendações',
-      ],
-    ),
+    _screens = [
+      HomeScreen(
+        weatherService: widget.weatherService,
+      ),
 
-    ModulePlaceholderScreen(
-      title: 'Registros',
-      headline: 'Registros em preparação',
-      description:
-          'Organize observações sobre as '
-          'condições do território monitorado.',
-      icon: Icons.assignment_outlined,
-      plannedFeatures: [
-        'Cadastro de observações',
-        'Validação dos formulários',
-        'Histórico de registros locais',
-      ],
-    ),
-  ];
+      const ModulePlaceholderScreen(
+        title: 'Tendências',
+        headline: 'Evolução dos indicadores',
+        description:
+            'Acompanhe tendências climáticas e '
+            'informações relevantes para o território.',
+        icon: Icons.show_chart_rounded,
+        plannedFeatures: [
+          'Gráficos de temperatura',
+          'Previsão de precipitação',
+          'Análise de tendências climáticas',
+        ],
+      ),
+
+      const ModulePlaceholderScreen(
+        title: 'Alertas',
+        headline: 'Alertas em preparação',
+        description:
+            'Identificação preventiva de situações '
+            'que podem exigir atenção dos gestores.',
+        icon: Icons.warning_amber_rounded,
+        plannedFeatures: [
+          'Identificação de riscos potenciais',
+          'Justificativa e nível de confiança',
+          'Limitações e recomendações',
+        ],
+      ),
+
+      const ModulePlaceholderScreen(
+        title: 'Registros',
+        headline: 'Registros em preparação',
+        description:
+            'Organize observações sobre as '
+            'condições do território monitorado.',
+        icon: Icons.assignment_outlined,
+        plannedFeatures: [
+          'Cadastro de observações',
+          'Validação dos formulários',
+          'Histórico de registros locais',
+        ],
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,26 +97,22 @@ class _MainNavigationScreenState
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon:
-                Icon(Icons.dashboard_rounded),
+            selectedIcon: Icon(Icons.dashboard_rounded),
             label: 'Painel',
           ),
           NavigationDestination(
             icon: Icon(Icons.show_chart_outlined),
-            selectedIcon:
-                Icon(Icons.show_chart_rounded),
+            selectedIcon: Icon(Icons.show_chart_rounded),
             label: 'Tendências',
           ),
           NavigationDestination(
             icon: Icon(Icons.warning_amber_outlined),
-            selectedIcon:
-                Icon(Icons.warning_amber_rounded),
+            selectedIcon: Icon(Icons.warning_amber_rounded),
             label: 'Alertas',
           ),
           NavigationDestination(
             icon: Icon(Icons.assignment_outlined),
-            selectedIcon:
-                Icon(Icons.assignment_rounded),
+            selectedIcon: Icon(Icons.assignment_rounded),
             label: 'Registros',
           ),
         ],

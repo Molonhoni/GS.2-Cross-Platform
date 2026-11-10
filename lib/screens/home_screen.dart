@@ -2,9 +2,13 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/module_card.dart';
+import '../services/weather_service.dart';
+import '../widgets/weather_overview_card.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final WeatherService? weatherService;
+
+  const HomeScreen({super.key, this.weatherService});
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +66,10 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            WeatherOverviewCard(service: weatherService),
 
             const SizedBox(height: 30),
 

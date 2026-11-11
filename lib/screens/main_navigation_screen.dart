@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
 import '../services/weather_service.dart';
+
+import 'alerts_screen.dart';
 import 'home_screen.dart';
 import 'module_placeholder_screen.dart';
 import 'trends_screen.dart';
@@ -45,18 +47,8 @@ class _MainNavigationScreenState
         controller: _weatherController,
       ),
 
-      const ModulePlaceholderScreen(
-        title: 'Alertas',
-        headline: 'Alertas em preparação',
-        description:
-            'Identificação preventiva de situações '
-            'que podem exigir atenção dos gestores.',
-        icon: Icons.warning_amber_rounded,
-        plannedFeatures: [
-          'Identificação de riscos potenciais',
-          'Justificativa e nível de confiança',
-          'Limitações e recomendações',
-        ],
+      AlertsScreen(
+        controller: _weatherController,
       ),
 
       const ModulePlaceholderScreen(
@@ -102,12 +94,14 @@ class _MainNavigationScreenState
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
+            selectedIcon:
+                Icon(Icons.dashboard_rounded),
             label: 'Painel',
           ),
           NavigationDestination(
             icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart_rounded),
+            selectedIcon:
+                Icon(Icons.show_chart_rounded),
             label: 'Tendências',
           ),
           NavigationDestination(
@@ -118,7 +112,8 @@ class _MainNavigationScreenState
           ),
           NavigationDestination(
             icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment_rounded),
+            selectedIcon:
+                Icon(Icons.assignment_rounded),
             label: 'Registros',
           ),
         ],

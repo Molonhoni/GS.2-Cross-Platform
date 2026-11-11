@@ -13,7 +13,6 @@ import 'package:territorio_vivo/screens/trends_screen.dart';
 import 'package:territorio_vivo/services/weather_service.dart';
 
 void main() {
-  // Dados simulados para os testes automatizados.
   final hourlyTimes = List.generate(
     72,
     (index) => DateTime(2026, 11, 9)
@@ -45,7 +44,6 @@ void main() {
     },
   };
 
-  // Auxiliar para localizar componentes em listas roláveis.
   Future<void> scrollToText(
     WidgetTester tester,
     Finder screen,
@@ -67,7 +65,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  // TESTE 01 - Conversão dos dados da API.
   test('Converte os dados e as previsoes horarias', () async {
     final client = MockClient((request) async {
       return http.Response(
@@ -88,7 +85,6 @@ void main() {
     client.close();
   });
 
-  // TESTE 02 - Gerenciamento de estado.
   test('Controller carrega dados e previsoes', () async {
     final client = MockClient((request) async {
       return http.Response(
@@ -117,7 +113,6 @@ void main() {
     client.close();
   });
 
-  // TESTE 03 - Tratamento de falhas na API.
   test('Mantem os dados quando a atualizacao falha', () async {
     var requestCount = 0;
 
@@ -158,9 +153,8 @@ void main() {
     client.close();
   });
 
-  // TESTE 04 - Interface, gráficos e navegação.
   testWidgets(
-    'Exibe graficos e navega entre os modulos',
+    'Exibe graficos, alertas e navega entre os modulos',
     (WidgetTester tester) async {
       var requestCount = 0;
 
@@ -181,7 +175,6 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verifica os indicadores da tela inicial.
       expect(
         find.text('Condições climáticas'),
         findsOneWidget,
@@ -194,7 +187,7 @@ void main() {
 
       expect(requestCount, 1);
 
-      // Rola até o gráfico no Dashboard.
+      // Verifica o gráfico do Dashboard.
       await scrollToText(
         tester,
         find.byType(HomeScreen),
@@ -218,7 +211,6 @@ void main() {
         findsOneWidget,
       );
 
-      // Localiza o gráfico de precipitação.
       await scrollToText(
         tester,
         find.byType(TrendsScreen),
@@ -230,8 +222,6 @@ void main() {
         findsOneWidget,
       );
 
-      // Confirma que a navegação não gerou
-      // novas requisições à API.
       expect(requestCount, 1);
 
       // Navega para Alertas.
@@ -242,7 +232,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Alertas em preparação'),
+        find.text('Alertas preventivos'),
+        findsOneWidget,
+      );
+
+      expect(
+        find.text('Nenhum sinal acima dos limiares'),
         findsOneWidget,
       );
 
@@ -265,8 +260,6 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Volta ao início da lista para conferir
-      // que os indicadores foram preservados.
       await scrollToText(
         tester,
         find.byType(HomeScreen),
@@ -284,10 +277,9 @@ void main() {
         findsOneWidget,
       );
 
-      // Nenhuma consulta adicional deve ocorrer.
+      // O estado compartilhado evita novas consultas.
       expect(requestCount, 1);
 
-      // Finaliza a árvore de widgets.
       await tester.pumpWidget(
         const SizedBox.shrink(),
       );

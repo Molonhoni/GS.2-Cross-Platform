@@ -1,13 +1,14 @@
 
 import 'package:flutter/material.dart';
 
+import '../controllers/record_controller.dart';
 import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
 import '../services/weather_service.dart';
 
 import 'alerts_screen.dart';
 import 'home_screen.dart';
-import 'module_placeholder_screen.dart';
+import 'records_screen.dart';
 import 'trends_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _MainNavigationScreenState
   int _selectedIndex = 0;
 
   late final WeatherController _weatherController;
+  late final RecordController _recordController;
   late final List<Widget> _screens;
 
   @override
@@ -37,6 +39,8 @@ class _MainNavigationScreenState
     _weatherController = WeatherController(
       widget.weatherService ?? WeatherService(),
     );
+
+    _recordController = RecordController();
 
     _screens = [
       HomeScreen(
@@ -51,18 +55,8 @@ class _MainNavigationScreenState
         controller: _weatherController,
       ),
 
-      const ModulePlaceholderScreen(
-        title: 'Registros',
-        headline: 'Registros em preparação',
-        description:
-            'Organize observações sobre as '
-            'condições do território monitorado.',
-        icon: Icons.assignment_outlined,
-        plannedFeatures: [
-          'Cadastro de observações',
-          'Validação dos formulários',
-          'Histórico de registros locais',
-        ],
+      RecordsScreen(
+        controller: _recordController,
       ),
     ];
 
@@ -72,6 +66,7 @@ class _MainNavigationScreenState
   @override
   void dispose() {
     _weatherController.dispose();
+    _recordController.dispose();
     super.dispose();
   }
 

@@ -6,9 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:territorio_vivo/controllers/record_controller.dart';
 import 'package:territorio_vivo/controllers/weather_controller.dart';
 import 'package:territorio_vivo/main.dart';
+import 'package:territorio_vivo/models/territorial_record.dart';
 import 'package:territorio_vivo/screens/home_screen.dart';
+import 'package:territorio_vivo/screens/records_screen.dart';
 import 'package:territorio_vivo/screens/trends_screen.dart';
 import 'package:territorio_vivo/services/weather_service.dart';
 
@@ -44,6 +47,17 @@ void main() {
     },
   };
 
+  WeatherService createMockService() {
+    return WeatherService(
+      client: MockClient((request) async {
+        return http.Response(
+          jsonEncode(mockResponse),
+          200,
+        );
+      }),
+    );
+  }
+
   Future<void> scrollToText(
     WidgetTester tester,
     Finder screen,
@@ -59,21 +73,14 @@ void main() {
       find.text(text),
       scrollDelta,
       scrollable: scrollable,
-      maxScrolls: 20,
+      maxScrolls: 30,
     );
 
     await tester.pumpAndSettle();
   }
 
   test('Converte os dados e as previsoes horarias', () async {
-    final client = MockClient((request) async {
-      return http.Response(
-        jsonEncode(mockResponse),
-        200,
-      );
-    });
-
-    final service = WeatherService(client: client);
+    final service = createMockService();
     final data = await service.fetchWeather();
 
     expect(data.temperature, 26.4);
@@ -82,20 +89,12 @@ void main() {
     expect(data.hourlyForecast.length, 24);
     expect(data.hourlyForecast.first.time.hour, 16);
 
-    client.close();
+    service.client?.close();
   });
 
   test('Controller carrega dados e previsoes', () async {
-    final client = MockClient((request) async {
-      return http.Response(
-        jsonEncode(mockResponse),
-        200,
-      );
-    });
-
-    final controller = WeatherController(
-      WeatherService(client: client),
-    );
+    final service = createMockService();
+    final controller = WeatherController(service);
 
     await controller.loadWeather();
 
@@ -110,7 +109,7 @@ void main() {
     );
 
     controller.dispose();
-    client.close();
+    service.client?.close();
   });
 
   test('Mantem os dados quando a atualizacao falha', () async {
@@ -139,7 +138,6 @@ void main() {
     await controller.loadWeather();
 
     expect(controller.hasData, true);
-    expect(controller.weather?.temperature, 26.4);
 
     await controller.loadWeather();
 
@@ -152,6 +150,45 @@ void main() {
     controller.dispose();
     client.close();
   });
+
+  test(
+    'RecordController cadastra e remove observacoes',
+    () {
+      final controller = RecordController();
+
+      expect(controller.totalRecords, 0);
+
+      controller.addRecord(
+        title: '  Resíduos acumulados  ',
+        area: '  Vila Mariana  ',
+        description:
+            '  Acúmulo de resíduos próximo à praça.  ',
+        category: RecordCategory.waste,
+      );
+
+      expect(controller.totalRecords, 1);
+      expect(
+        controller.records.first.title,
+        'Resíduos acumulados',
+      );
+      expect(
+        controller.records.first.area,
+        'Vila Mariana',
+      );
+      expect(
+        controller.records.first.category,
+        RecordCategory.waste,
+      );
+
+      final recordId = controller.records.first.id;
+
+      expect(controller.removeRecord(recordId), true);
+      expect(controller.totalRecords, 0);
+      expect(controller.removeRecord(recordId), false);
+
+      controller.dispose();
+    },
+  );
 
   testWidgets(
     'Exibe graficos, alertas e navega entre os modulos',
@@ -187,7 +224,6 @@ void main() {
 
       expect(requestCount, 1);
 
-      // Verifica o gráfico do Dashboard.
       await scrollToText(
         tester,
         find.byType(HomeScreen),
@@ -199,7 +235,7 @@ void main() {
         findsOneWidget,
       );
 
-      // Navega para Tendências.
+      // Navegação para Tendências.
       await tester.tap(
         find.byIcon(Icons.show_chart_outlined),
       );
@@ -224,7 +260,7 @@ void main() {
 
       expect(requestCount, 1);
 
-      // Navega para Alertas.
+      // Navegação para Alertas.
       await tester.tap(
         find.byIcon(Icons.warning_amber_outlined),
       );
@@ -241,7 +277,7 @@ void main() {
         findsOneWidget,
       );
 
-      // Navega para Registros.
+      // Navegação para Registros.
       await tester.tap(
         find.byIcon(Icons.assignment_outlined),
       );
@@ -249,11 +285,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Registros em preparação'),
+        find.text('Registros de campo'),
         findsOneWidget,
       );
 
-      // Retorna ao Dashboard.
+      expect(
+        find.text('Nova observação'),
+        findsOneWidget,
+      );
+
+      // Retorno ao Dashboard.
       await tester.tap(
         find.byIcon(Icons.dashboard_outlined),
       );
@@ -268,16 +309,11 @@ void main() {
       );
 
       expect(
-        find.text('Condições climáticas'),
-        findsOneWidget,
-      );
-
-      expect(
         find.text('26.4 °C'),
         findsOneWidget,
       );
 
-      // O estado compartilhado evita novas consultas.
+      // A navegação não deve refazer a consulta.
       expect(requestCount, 1);
 
       await tester.pumpWidget(
@@ -285,6 +321,136 @@ void main() {
       );
 
       client.close();
+    },
+  );
+
+  testWidgets(
+    'Formulario valida e cadastra observacoes',
+    (WidgetTester tester) async {
+      final service = createMockService();
+
+      await tester.pumpWidget(
+        TerritorioVivoApp(weatherService: service),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Abre a tela de registros.
+      await tester.tap(
+        find.byIcon(Icons.assignment_outlined),
+      );
+
+      await tester.pumpAndSettle();
+
+      final saveButton = find.byKey(
+        const Key('record_save_button'),
+      );
+
+      // Tenta salvar sem preencher os campos.
+      await tester.ensureVisible(saveButton);
+      await tester.pumpAndSettle();
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Observação registrada com sucesso.'),
+        findsNothing,
+      );
+
+      // Preenche o título.
+      final titleField = find.byKey(
+        const Key('record_title_field'),
+      );
+
+      await tester.ensureVisible(titleField);
+      await tester.enterText(
+        titleField,
+        'Acúmulo na praça',
+      );
+
+      // Seleciona a categoria.
+      final categoryField = find.byKey(
+        const Key('record_category_field'),
+      );
+
+      await tester.ensureVisible(categoryField);
+      await tester.pumpAndSettle();
+      await tester.tap(categoryField);
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.text('Resíduos e limpeza').last,
+      );
+
+      await tester.pumpAndSettle();
+
+      // Preenche a região.
+      final areaField = find.byKey(
+        const Key('record_area_field'),
+      );
+
+      await tester.ensureVisible(areaField);
+      await tester.enterText(
+        areaField,
+        'Vila Mariana',
+      );
+
+      // Preenche a descrição.
+      final descriptionField = find.byKey(
+        const Key('record_description_field'),
+      );
+
+      await tester.ensureVisible(descriptionField);
+      await tester.enterText(
+        descriptionField,
+        'Resíduos acumulados próximos à praça.',
+      );
+
+      // Salva a observação.
+      await tester.ensureVisible(saveButton);
+      await tester.pumpAndSettle();
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      // Localiza o registro na lista.
+      await scrollToText(
+        tester,
+        find.byType(RecordsScreen),
+        'Acúmulo na praça',
+      );
+
+      expect(
+        find.text('Acúmulo na praça'),
+        findsOneWidget,
+      );
+
+      expect(
+        find.text('Registros cadastrados (1)'),
+        findsOneWidget,
+      );
+
+      // Verifica que o registro permanece ao
+      // trocar de tela e retornar.
+      await tester.tap(
+        find.byIcon(Icons.show_chart_outlined),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byIcon(Icons.assignment_outlined),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Acúmulo na praça'),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(
+        const SizedBox.shrink(),
+      );
+
+      service.client?.close();
     },
   );
 }

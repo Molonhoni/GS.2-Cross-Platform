@@ -1,4 +1,6 @@
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../controllers/weather_controller.dart';
@@ -62,7 +64,7 @@ class WeatherOverviewCard extends StatelessWidget {
               const Text(
                 'São Paulo, SP',
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: AppColors.textSecondary,
                 ),
               ),
 
@@ -108,7 +110,7 @@ class WeatherOverviewCard extends StatelessWidget {
                 'previsto para hoje, não um alerta oficial.',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.black54,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],
@@ -158,7 +160,7 @@ class _WeatherContent extends StatelessWidget {
             'Atualizando informações...',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.black54,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 12),
@@ -197,15 +199,30 @@ class _WeatherContent extends StatelessWidget {
 
         LayoutBuilder(
           builder: (context, constraints) {
+            // Corrige o overflow em telas menores.
+            // Cada indicador recebe altura suficiente
+            // para ícone, valor e descrição.
+            //
+            // Em fontes ampliadas, a altura também
+            // aumenta para preservar a acessibilidade.
+
+            final textScale =
+                MediaQuery.textScalerOf(context).scale(1.0);
+
+            final tileHeight =
+                150.0 * math.max(1.0, textScale);
+
+            final columns =
+                constraints.maxWidth >= 700 ? 4 : 2;
+
             return GridView.count(
               shrinkWrap: true,
               physics:
                   const NeverScrollableScrollPhysics(),
-              crossAxisCount:
-                  constraints.maxWidth >= 700 ? 4 : 2,
+              crossAxisCount: columns,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 1.4,
+              mainAxisExtent: tileHeight,
               children: [
                 _MetricTile(
                   icon: Icons.thermostat_outlined,
@@ -242,7 +259,7 @@ class _WeatherContent extends StatelessWidget {
           '$day/$month às $hour:$minute',
           style: const TextStyle(
             fontSize: 12,
-            color: Colors.black54,
+            color: AppColors.textSecondary,
           ),
         ),
       ],
@@ -269,12 +286,16 @@ class _ErrorContent extends StatelessWidget {
             size: 34,
             color: Colors.orange,
           ),
+
           const SizedBox(height: 12),
+
           Text(
             message,
             textAlign: TextAlign.center,
           ),
+
           const SizedBox(height: 12),
+
           OutlinedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
@@ -311,21 +332,32 @@ class _MetricTile extends StatelessWidget {
           Icon(
             icon,
             color: AppColors.accent,
+            size: 24,
           ),
+
           const SizedBox(height: 7),
+
           Text(
             value,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.bold,
               color: AppColors.primary,
             ),
           ),
+
           const SizedBox(height: 5),
+
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11),
+            softWrap: true,
+            style: const TextStyle(
+              fontSize: 11,
+              height: 1.3,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),

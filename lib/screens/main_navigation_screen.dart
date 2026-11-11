@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../controllers/record_controller.dart';
 import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
+import '../services/record_repository.dart';
 import '../services/weather_service.dart';
 
 import 'alerts_screen.dart';
@@ -13,10 +14,12 @@ import 'trends_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final WeatherService? weatherService;
+  final RecordRepository? recordRepository;
 
   const MainNavigationScreen({
     super.key,
     this.weatherService,
+    this.recordRepository,
   });
 
   @override
@@ -40,27 +43,27 @@ class _MainNavigationScreenState
       widget.weatherService ?? WeatherService(),
     );
 
-    _recordController = RecordController();
+    _recordController = RecordController(
+      repository: widget.recordRepository,
+    );
 
     _screens = [
       HomeScreen(
         weatherController: _weatherController,
       ),
-
       TrendsScreen(
         controller: _weatherController,
       ),
-
       AlertsScreen(
         controller: _weatherController,
       ),
-
       RecordsScreen(
         controller: _recordController,
       ),
     ];
 
     _weatherController.loadWeather();
+    _recordController.loadRecords();
   }
 
   @override

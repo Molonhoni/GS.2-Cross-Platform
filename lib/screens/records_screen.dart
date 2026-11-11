@@ -42,36 +42,52 @@ class _RecordsScreenState extends State<RecordsScreen> {
     _areaController.clear();
     _descriptionController.clear();
 
-    _selectedCategory = null;
+    setState(() {
+      _selectedCategory = null;
+    });
   }
 
-  void _saveRecord() {
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _saveRecord() async {
     FocusScope.of(context).unfocus();
 
-    final isValid =
+    final valid =
         _formKey.currentState?.validate() ?? false;
 
-    if (!isValid || _selectedCategory == null) {
+    if (!valid || _selectedCategory == null) {
       return;
     }
 
-    widget.controller.addRecord(
+    final success = await widget.controller.addRecord(
       title: _titleController.text,
       area: _areaController.text,
       description: _descriptionController.text,
       category: _selectedCategory!,
     );
 
-    _clearForm();
+    if (!mounted) {
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Observação registrada com sucesso.',
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (success) {
+      _clearForm();
+      _showMessage(
+        'Observação salva localmente com sucesso.',
+      );
+    } else {
+      _showMessage(
+        widget.controller.error ??
+            'Não foi possível salvar a observação.',
+      );
+    }
   }
 
   Future<void> _confirmDelete(
@@ -83,8 +99,8 @@ class _RecordsScreenState extends State<RecordsScreen> {
         return AlertDialog(
           title: const Text('Excluir observação?'),
           content: const Text(
-            'O registro será removido desta sessão. '
-            'Essa ação não pode ser desfeita.',
+            'O registro será excluído do '
+            'armazenamento local deste dispositivo.',
           ),
           actions: [
             TextButton(
@@ -108,13 +124,19 @@ class _RecordsScreenState extends State<RecordsScreen> {
       return;
     }
 
-    widget.controller.removeRecord(record.id);
+    final removed = await widget.controller.removeRecord(
+      record.id,
+    );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Observação excluída.'),
-        behavior: SnackBarBehavior.floating,
-      ),
+    if (!mounted) {
+      return;
+    }
+
+    _showMessage(
+      removed
+          ? 'Observação excluída com sucesso.'
+          : widget.controller.error ??
+              'Não foi possível excluir a observação.',
     );
   }
 
@@ -151,343 +173,410 @@ class _RecordsScreenState extends State<RecordsScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Registros de campo',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
+  Widget _buildContent() {
+    final controller = widget.controller;
+
+    if (!controller.isReady) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (controller.isLoading)
+                const CircularProgressIndicator()
+              else
+                const Icon(
+                  Icons.storage_outlined,
+                  size: 42,
+                  color: AppColors.accent,
+                ),
+              const SizedBox(height: 16),
+              Text(
+                controller.isLoading
+                    ? 'Recuperando registros locais...'
+                    : controller.error ??
+                        'Não foi possível carregar os registros.',
+                textAlign: TextAlign.center,
+              ),
+              if (!controller.isLoading) ...[
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    controller.loadRecords();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Tentar novamente'),
+                ),
+              ],
+            ],
           ),
         ),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.accent,
-                  ],
+      );
+    }
+
+    final records = controller.records;
+
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.accent,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.assignment_outlined,
+                size: 36,
+                color: Colors.white,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Observações territoriais',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 23,
+                  fontWeight: FontWeight.bold,
                 ),
-                borderRadius: BorderRadius.circular(22),
               ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.assignment_outlined,
-                    size: 36,
-                    color: Colors.white,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Observações territoriais',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 23,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Registre situações observadas '
-                    'no território e organize '
-                    'informações para apoiar a gestão.',
-                    style: TextStyle(
-                      color: Colors.white,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
+              SizedBox(height: 10),
+              Text(
+                'Registre situações observadas '
+                'no território e organize '
+                'informações para apoiar a gestão.',
+                style: TextStyle(
+                  color: Colors.white,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        const Text(
+          'Nova observação',
+          style: TextStyle(
+            fontSize: 21,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        const Text(
+          'Os registros serão armazenados '
+          'localmente neste dispositivo.',
+          style: TextStyle(
+            color: Colors.black54,
+          ),
+        ),
+
+        const SizedBox(height: 22),
+
+        if (controller.isSaving) ...[
+          const LinearProgressIndicator(),
+          const SizedBox(height: 12),
+          const Text(
+            'Salvando alterações...',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        if (controller.error != null) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              controller.error!,
+              style: const TextStyle(
+                color: Color(0xFF713F00),
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+        ],
 
-            const SizedBox(height: 24),
-
-            const Text(
-              'Nova observação',
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+        Form(
+          key: _formKey,
+          autovalidateMode:
+              AutovalidateMode.onUserInteraction,
+          child: Column(
+            children: [
+              TextFormField(
+                key: const Key('record_title_field'),
+                controller: _titleController,
+                enabled: !controller.isBusy,
+                maxLength: 70,
+                textCapitalization:
+                    TextCapitalization.sentences,
+                decoration: _fieldDecoration(
+                  label: 'Título da observação',
+                  hint: 'Ex.: Resíduos acumulados',
+                  icon: Icons.title,
+                ),
+                validator: (value) {
+                  if ((value?.trim().length ?? 0) < 5) {
+                    return 'Informe um título com '
+                        'pelo menos 5 caracteres.';
+                  }
+                  return null;
+                },
               ),
-            ),
 
-            const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
-            const Text(
-              'Preencha os campos abaixo para '
-              'cadastrar uma observação.',
-              style: TextStyle(color: Colors.black54),
-            ),
-
-            const SizedBox(height: 22),
-
-            Form(
-              key: _formKey,
-              autovalidateMode:
-                  AutovalidateMode.onUserInteraction,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    key: const Key('record_title_field'),
-                    controller: _titleController,
-                    maxLength: 70,
-                    textCapitalization:
-                        TextCapitalization.sentences,
-                    decoration: _fieldDecoration(
-                      label: 'Título da observação',
-                      hint: 'Ex.: Resíduos acumulados',
-                      icon: Icons.title,
-                    ),
-                    validator: (value) {
-                      if ((value?.trim().length ?? 0) < 5) {
-                        return 'Informe um título com '
-                            'pelo menos 5 caracteres.';
-                      }
-
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  DropdownButtonFormField<RecordCategory>(
-                    key: const Key('record_category_field'),
-                    initialValue: null,
-                    isExpanded: true,
-                    decoration: _fieldDecoration(
-                      label: 'Categoria',
-                      hint: 'Selecione uma categoria',
-                      icon: Icons.category_outlined,
-                    ),
-                    items: RecordCategory.values.map(
-                      (category) {
-                        return DropdownMenuItem(
-                          value: category,
-                          child: Text(category.label),
-                        );
+              DropdownButtonFormField<RecordCategory>(
+                key: const Key('record_category_field'),
+                initialValue: null,
+                isExpanded: true,
+                decoration: _fieldDecoration(
+                  label: 'Categoria',
+                  hint: 'Selecione uma categoria',
+                  icon: Icons.category_outlined,
+                ),
+                items: RecordCategory.values.map(
+                  (category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category.label),
+                    );
+                  },
+                ).toList(),
+                onChanged: controller.isBusy
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedCategory = value;
+                        });
                       },
-                    ).toList(),
-                    onChanged: (value) {
-                      _selectedCategory = value;
-                    },
-                    validator: (value) {
-                      if (value == null) {
-                        return 'Selecione uma categoria.';
-                      }
-
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  TextFormField(
-                    key: const Key('record_area_field'),
-                    controller: _areaController,
-                    maxLength: 60,
-                    textCapitalization:
-                        TextCapitalization.words,
-                    decoration: _fieldDecoration(
-                      label: 'Bairro ou região',
-                      hint: 'Ex.: Vila Mariana',
-                      icon: Icons.location_on_outlined,
-                    ),
-                    validator: (value) {
-                      if ((value?.trim().length ?? 0) < 3) {
-                        return 'Informe um bairro ou '
-                            'região com pelo menos '
-                            '3 caracteres.';
-                      }
-
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  TextFormField(
-                    key:
-                        const Key('record_description_field'),
-                    controller: _descriptionController,
-                    minLines: 3,
-                    maxLines: 5,
-                    maxLength: 500,
-                    textCapitalization:
-                        TextCapitalization.sentences,
-                    decoration: _fieldDecoration(
-                      label: 'Descrição da ocorrência',
-                      hint: 'Descreva a situação observada',
-                      icon: Icons.notes_rounded,
-                    ),
-                    validator: (value) {
-                      if ((value?.trim().length ?? 0) < 10) {
-                        return 'A descrição deve ter '
-                            'pelo menos 10 caracteres.';
-                      }
-
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      key: const Key('record_save_button'),
-                      onPressed: _saveRecord,
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('Salvar observação'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(17),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: _clearForm,
-                      icon: const Icon(Icons.clear),
-                      label: const Text('Limpar campos'),
-                    ),
-                  ),
-                ],
+                validator: (value) {
+                  return value == null
+                      ? 'Selecione uma categoria.'
+                      : null;
+                },
               ),
-            ),
 
-            const SizedBox(height: 30),
+              const SizedBox(height: 22),
 
-            ListenableBuilder(
-              listenable: widget.controller,
-              builder: (context, child) {
-                final records = widget.controller.records;
+              TextFormField(
+                key: const Key('record_area_field'),
+                controller: _areaController,
+                enabled: !controller.isBusy,
+                maxLength: 60,
+                textCapitalization:
+                    TextCapitalization.words,
+                decoration: _fieldDecoration(
+                  label: 'Bairro ou região',
+                  hint: 'Ex.: Vila Mariana',
+                  icon: Icons.location_on_outlined,
+                ),
+                validator: (value) {
+                  if ((value?.trim().length ?? 0) < 3) {
+                    return 'Informe um bairro ou '
+                        'região com pelo menos '
+                        '3 caracteres.';
+                  }
+                  return null;
+                },
+              ),
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Registros cadastrados (${records.length})',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
+              const SizedBox(height: 12),
 
-                    const SizedBox(height: 16),
+              TextFormField(
+                key: const Key('record_description_field'),
+                controller: _descriptionController,
+                enabled: !controller.isBusy,
+                minLines: 3,
+                maxLines: 5,
+                maxLength: 500,
+                textCapitalization:
+                    TextCapitalization.sentences,
+                decoration: _fieldDecoration(
+                  label: 'Descrição da ocorrência',
+                  hint: 'Descreva a situação observada',
+                  icon: Icons.notes_rounded,
+                ),
+                validator: (value) {
+                  if ((value?.trim().length ?? 0) < 10) {
+                    return 'A descrição deve ter '
+                        'pelo menos 10 caracteres.';
+                  }
+                  return null;
+                },
+              ),
 
-                    if (records.isEmpty)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.support,
-                          ),
-                        ),
-                        child: const Column(
-                          children: [
-                            Icon(
-                              Icons.inbox_outlined,
-                              size: 36,
-                              color: AppColors.accent,
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              'Nenhum registro cadastrado.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'As observações cadastradas '
-                              'aparecerão aqui.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ...records.map(
-                        (record) => Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: 14),
-                          child: _RecordCard(
-                            record: record,
-                            onDelete: () {
-                              _confirmDelete(record);
-                            },
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
+              const SizedBox(height: 12),
 
-            const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: const Key('record_save_button'),
+                  onPressed: controller.isBusy
+                      ? null
+                      : () {
+                          _saveRecord();
+                        },
+                  icon: const Icon(Icons.save_outlined),
+                  label: Text(
+                    controller.isSaving
+                        ? 'Salvando...'
+                        : 'Salvar observação',
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.all(17),
+                  ),
+                ),
+              ),
 
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              const SizedBox(height: 8),
+
+              TextButton.icon(
+                onPressed: controller.isBusy
+                    ? null
+                    : _clearForm,
+                icon: const Icon(Icons.clear),
+                label: const Text('Limpar campos'),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 30),
+
+        Text(
+          'Registros cadastrados (${records.length})',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        if (records.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
                 color: AppColors.support,
-                borderRadius: BorderRadius.circular(14),
               ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.info_outline,
+            ),
+            child: const Column(
+              children: [
+                Icon(
+                  Icons.inbox_outlined,
+                  size: 36,
+                  color: AppColors.accent,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Nenhum registro cadastrado.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
                     color: AppColors.primary,
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Versão demonstrativa: os registros '
-                      'são mantidos apenas durante a '
-                      'execução do aplicativo. '
-                      'Não inclua nomes de cidadãos, '
-                      'endereços completos ou outros '
-                      'dados pessoais. A persistência '
-                      'local será implementada na '
-                      'próxima etapa.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.5,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+          )
+        else
+          ...records.map(
+            (record) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _RecordCard(
+                record: record,
+                enabled: !controller.isBusy,
+                onDelete: () {
+                  _confirmDelete(record);
+                },
               ),
             ),
+          ),
 
-            const SizedBox(height: 20),
-          ],
+        const SizedBox(height: 24),
+
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.support,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: AppColors.primary,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Os registros são armazenados apenas '
+                  'neste dispositivo ou navegador. '
+                  'Não são enviados a um servidor. '
+                  'Evite incluir nomes, endereços '
+                  'completos ou dados pessoais. '
+                  'A limpeza dos dados do aplicativo '
+                  'ou navegador pode excluir os registros.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              'Registros de campo',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          body: SafeArea(
+            child: _buildContent(),
+          ),
+        );
+      },
     );
   }
 }
@@ -495,16 +584,18 @@ class _RecordsScreenState extends State<RecordsScreen> {
 class _RecordCard extends StatelessWidget {
   final TerritorialRecord record;
   final VoidCallback onDelete;
+  final bool enabled;
 
   const _RecordCard({
     required this.record,
     required this.onDelete,
+    required this.enabled,
   });
 
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
+    final year = date.year;
 
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
@@ -519,7 +610,9 @@ class _RecordCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.support),
+        border: Border.all(
+          color: AppColors.support,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -557,8 +650,8 @@ class _RecordCard extends StatelessWidget {
                     Text(
                       record.category.label,
                       style: const TextStyle(
-                        color: AppColors.accent,
                         fontSize: 12,
+                        color: AppColors.accent,
                       ),
                     ),
                   ],
@@ -567,7 +660,7 @@ class _RecordCard extends StatelessWidget {
 
               IconButton(
                 tooltip: 'Excluir registro',
-                onPressed: onDelete,
+                onPressed: enabled ? onDelete : null,
                 icon: const Icon(
                   Icons.delete_outline,
                   color: Colors.redAccent,

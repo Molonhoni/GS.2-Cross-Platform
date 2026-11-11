@@ -40,4 +40,37 @@ class TerritorialRecord {
     required this.category,
     required this.createdAt,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'area': area,
+      'description': description,
+      'category': category.name,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory TerritorialRecord.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final categoryName = json['category'] as String;
+
+    final category = RecordCategory.values.firstWhere(
+      (item) => item.name == categoryName,
+      orElse: () => RecordCategory.other,
+    );
+
+    return TerritorialRecord(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      area: json['area'] as String,
+      description: json['description'] as String,
+      category: category,
+      createdAt: DateTime.parse(
+        json['createdAt'] as String,
+      ),
+    );
+  }
 }

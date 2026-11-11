@@ -79,17 +79,24 @@ class TemperatureForecastCard extends StatelessWidget {
                 maxX: (forecast.length - 1).toDouble(),
                 minY: minTemperature - 2,
                 maxY: maxTemperature + 2,
+
                 gridData: const FlGridData(
                   show: true,
                   drawVerticalLine: false,
                 ),
+
                 borderData: FlBorderData(show: false),
+
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                    sideTitles: SideTitles(
+                      showTitles: false,
+                    ),
                   ),
                   rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                    sideTitles: SideTitles(
+                      showTitles: false,
+                    ),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -120,16 +127,38 @@ class TemperatureForecastCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                lineTouchData: const LineTouchData(
+
+                // Tooltip personalizado:
+                // fundo escuro e números brancos.
+                lineTouchData: LineTouchData(
                   enabled: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (spot) =>
+                        AppColors.primary,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        return LineTooltipItem(
+                          '${spot.y.toStringAsFixed(1)} °C',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
                 ),
+
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,
                     color: AppColors.accent,
                     barWidth: 3,
                     isCurved: true,
-                    dotData: const FlDotData(show: false),
+                    dotData: const FlDotData(
+                      show: false,
+                    ),
                     belowBarData: BarAreaData(
                       show: true,
                       color: AppColors.support,
@@ -139,7 +168,9 @@ class TemperatureForecastCard extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(height: 12),
+
           Wrap(
             spacing: 16,
             runSpacing: 8,
@@ -205,17 +236,26 @@ class PrecipitationForecastCard extends StatelessWidget {
                 ),
                 alignment: BarChartAlignment.spaceAround,
                 groupsSpace: 4,
+
                 gridData: const FlGridData(
                   show: true,
                   drawVerticalLine: false,
                 ),
-                borderData: FlBorderData(show: false),
+
+                borderData: FlBorderData(
+                  show: false,
+                ),
+
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                    sideTitles: SideTitles(
+                      showTitles: false,
+                    ),
                   ),
                   rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                    sideTitles: SideTitles(
+                      showTitles: false,
+                    ),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -246,6 +286,33 @@ class PrecipitationForecastCard extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // Tooltip da precipitação:
+                // mesmo padrão visual do gráfico
+                // de temperatura.
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (group) =>
+                        AppColors.primary,
+                    getTooltipItem: (
+                      group,
+                      groupIndex,
+                      rod,
+                      rodIndex,
+                    ) {
+                      return BarTooltipItem(
+                        '${rod.toY.toStringAsFixed(1)} mm',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
                 barGroups: List.generate(
                   forecast.length,
                   (index) => BarChartGroupData(
@@ -266,7 +333,9 @@ class PrecipitationForecastCard extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(height: 12),
+
           _LegendValue(
             label: 'Precipitação acumulada prevista',
             value:
@@ -324,7 +393,9 @@ class _ChartContainer extends StatelessWidget {
               ),
             ],
           ),
+
           const SizedBox(height: 5),
+
           Text(
             subtitle,
             style: const TextStyle(
@@ -332,7 +403,9 @@ class _ChartContainer extends StatelessWidget {
               color: Colors.black54,
             ),
           ),
+
           const SizedBox(height: 24),
+
           child,
         ],
       ),
@@ -361,7 +434,9 @@ class _LegendValue extends StatelessWidget {
             color: Colors.black54,
           ),
         ),
+
         const SizedBox(height: 4),
+
         Text(
           value,
           style: const TextStyle(

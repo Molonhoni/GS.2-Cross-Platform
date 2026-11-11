@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
-import '../widgets/forecast_charts.dart';
+import '../widgets/accessible_forecast_chart.dart';
 
 class TrendsScreen extends StatelessWidget {
   final WeatherController controller;
@@ -105,10 +105,12 @@ class TrendsScreen extends StatelessWidget {
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.show_chart_rounded,
-                color: Colors.white,
-                size: 36,
+              ExcludeSemantics(
+                child: Icon(
+                  Icons.show_chart_rounded,
+                  color: Colors.white,
+                  size: 36,
+                ),
               ),
               SizedBox(height: 16),
               Text(
@@ -137,6 +139,12 @@ class TrendsScreen extends StatelessWidget {
         if (controller.isLoading) ...[
           const LinearProgressIndicator(),
           const SizedBox(height: 14),
+          const Text(
+            'Atualizando previsões...',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
 
         if (controller.error != null) ...[
@@ -149,19 +157,24 @@ class TrendsScreen extends StatelessWidget {
             child: Text(
               '${controller.error} '
               'Exibindo a última previsão disponível.',
+              style: const TextStyle(
+                color: Color(0xFF713F00),
+              ),
             ),
           ),
           const SizedBox(height: 18),
         ],
 
-        TemperatureForecastCard(
+        AccessibleForecastChart(
           forecast: forecast,
+          type: ForecastChartType.temperature,
         ),
 
         const SizedBox(height: 18),
 
-        PrecipitationForecastCard(
+        AccessibleForecastChart(
           forecast: forecast,
+          type: ForecastChartType.precipitation,
         ),
 
         const SizedBox(height: 22),
@@ -177,16 +190,20 @@ class TrendsScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: AppColors.primary,
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.info_outline,
+                      color: AppColors.primary,
+                    ),
                   ),
                   SizedBox(width: 10),
-                  Text(
-                    'Sobre as previsões',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      'Sobre as previsões',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -207,6 +224,8 @@ class TrendsScreen extends StatelessWidget {
             ],
           ),
         ),
+
+        const SizedBox(height: 20),
       ],
     );
   }

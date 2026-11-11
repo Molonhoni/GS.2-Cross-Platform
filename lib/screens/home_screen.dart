@@ -1,19 +1,33 @@
 
 import 'package:flutter/material.dart';
 
+import '../controllers/record_controller.dart';
 import '../controllers/weather_controller.dart';
 import '../core/theme/app_theme.dart';
-import '../widgets/forecast_charts.dart';
+import '../widgets/accessible_forecast_chart.dart';
 import '../widgets/module_card.dart';
 import '../widgets/weather_overview_card.dart';
+import 'privacy_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final WeatherController weatherController;
+  final RecordController recordController;
 
   const HomeScreen({
     super.key,
     required this.weatherController,
+    required this.recordController,
   });
+
+  void _openPrivacy(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => PrivacyScreen(
+          controller: recordController,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +39,18 @@ class HomeScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Privacidade e acessibilidade',
+            onPressed: () {
+              _openPrivacy(context);
+            },
+            icon: const Icon(
+              Icons.privacy_tip_outlined,
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: ListView(
@@ -45,10 +71,12 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.location_city_rounded,
-                    size: 36,
-                    color: Colors.white,
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.location_city_rounded,
+                      size: 36,
+                      color: Colors.white,
+                    ),
                   ),
                   SizedBox(height: 18),
                   Text(
@@ -88,9 +116,10 @@ class HomeScreen extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
 
-                return TemperatureForecastCard(
+                return AccessibleForecastChart(
                   forecast: weatherController
                       .weather!.hourlyForecast,
+                  type: ForecastChartType.temperature,
                 );
               },
             ),
@@ -111,7 +140,7 @@ class HomeScreen extends StatelessWidget {
             const Text(
               'Conheça os módulos da plataforma.',
               style: TextStyle(
-                color: Colors.black54,
+                color: AppColors.textSecondary,
               ),
             ),
 
@@ -148,11 +177,12 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             const Text(
-              'Alertas e registros serão integrados '
-              'nas próximas versões.',
+              'As previsões e os alertas são '
+              'informações demonstrativas de '
+              'apoio à decisão humana.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.black54,
+                color: AppColors.textSecondary,
                 fontSize: 12,
               ),
             ),

@@ -127,6 +127,19 @@ class RecordController extends ChangeNotifier {
     return _saveRecords(updatedRecords);
   }
 
+  // PRIVACIDADE: exclusão de todos os registros locais.
+  Future<bool> clearRecords() async {
+    if (_isDisposed || !_isReady || isBusy) {
+      return false;
+    }
+
+    if (_records.isEmpty) {
+      return true;
+    }
+
+    return _saveRecords([]);
+  }
+
   Future<bool> _saveRecords(
     List<TerritorialRecord> updatedRecords,
   ) async {

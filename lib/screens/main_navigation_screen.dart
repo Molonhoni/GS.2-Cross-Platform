@@ -50,13 +50,17 @@ class _MainNavigationScreenState
     _screens = [
       HomeScreen(
         weatherController: _weatherController,
+        recordController: _recordController,
       ),
+
       TrendsScreen(
         controller: _weatherController,
       ),
+
       AlertsScreen(
         controller: _weatherController,
       ),
+
       RecordsScreen(
         controller: _recordController,
       ),

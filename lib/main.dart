@@ -1,5 +1,7 @@
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'core/theme/app_theme.dart';
 import 'screens/main_navigation_screen.dart';
@@ -10,6 +12,10 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   runApp(const TerritorioVivoApp());
+
+  if (kIsWeb) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
 }
 
 class TerritorioVivoApp extends StatelessWidget {
